@@ -1,170 +1,48 @@
-import ctypes
 import wmi
-from ctypes import wintypes
-import unicodedata
-import subprocess
-import sys
+from screeninfo import get_monitors
 
-# Constantes
-MAX_DISPLAYS = 10
-LOG_FILE_PATH = r"C:\Windows\Temp\Monitor_Log.txt"
-ENUM_CURRENT_SETTINGS = -1  # Para obter a resolução ativa
+def get_monitor_info():
+    c = wmi.WMI(namespace='root\\wmi')
+    monitors = c.WmiMonitorID()
+    screen_monitors = get_monitors()
+    monitor_info = []
 
-# Função para verificar se o script está sendo executado com privilégios de administrador
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except Exception:
-        return False
+    for i, monitor in enumerate(monitors):
+        if i >= 3:
+            break
+        name = ''.join([chr(char) for char in monitor.UserFriendlyName if char != 0])
+        serial_number = ''.join([chr(char) for char in monitor.SerialNumberID if char != 0])
+        model = ''.join([chr(char) for char in monitor.ManufacturerName if char != 0])
+        
+        if i < len(screen_monitors):
+            screen_monitor = screen_monitors[i]
+            width_mm = screen_monitor.width_mm
+            height_mm = screen_monitor.height_mm
 
-# Função para reiniciar o script com privilégios de administrador, de forma silenciosa
-def run_as_admin():
-    if not is_admin():
-        try:
-            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, ' '.join(sys.argv), None, 0)
-            sys.exit(0)
-        except Exception as e:
-            print(f"Erro ao solicitar privilégios de administrador: {e}")
+            # Convertendo o tamanho de milimetros para polegadas
+            width_inches = width_mm / 25.4
+            height_inches = height_mm / 25.4
+            diagonal_inches = (width_inches**2 + height_inches**2) ** 0.5
 
-# Função para tentar ativar o WMI caso ele esteja desativado
-def ativar_wmi():
-    try:
-        resultado = subprocess.run(["sc", "query", "winmgmt"], capture_output=True, text=True)
-        if "RUNNING" not in resultado.stdout:
-            subprocess.run(["sc", "start", "winmgmt"], capture_output=True, text=True)
-    except Exception as e:
-        print(f"Erro ao ativar WMI: {e}")
-
-# Definição da estrutura DEVMODE para pegar informações do monitor com ctypes
-class DEVMODE(ctypes.Structure):
-    _fields_ = [
-        ("dmDeviceName", wintypes.WCHAR * 32),
-        ("dmSpecVersion", wintypes.WORD),
-        ("dmDriverVersion", wintypes.WORD),
-        ("dmSize", wintypes.WORD),
-        ("dmDriverExtra", wintypes.WORD),
-        ("dmFields", wintypes.DWORD),
-        ("dmPositionX", ctypes.c_long),
-        ("dmPositionY", ctypes.c_long),
-        ("dmDisplayOrientation", wintypes.DWORD),
-        ("dmDisplayFixedOutput", wintypes.DWORD),
-        ("dmColor", wintypes.WORD),
-        ("dmDuplex", wintypes.WORD),
-        ("dmYResolution", wintypes.WORD),
-        ("dmTTOption", wintypes.WORD),
-        ("dmCollate", wintypes.WORD),
-        ("dmFormName", wintypes.WCHAR * 32),
-        ("dmLogPixels", wintypes.WORD),
-        ("dmBitsPerPel", wintypes.DWORD),
-        ("dmPelsWidth", wintypes.DWORD),
-        ("dmPelsHeight", wintypes.DWORD),
-        ("dmDisplayFlags", wintypes.DWORD),
-        ("dmDisplayFrequency", wintypes.DWORD),
-        ("dmICMMethod", wintypes.DWORD),
-        ("dmICMIntent", wintypes.DWORD),
-        ("dmMediaType", wintypes.DWORD),
-        ("dmDitherType", wintypes.DWORD),
-        ("dmReserved1", wintypes.DWORD),
-        ("dmReserved2", wintypes.DWORD),
-        ("dmPanningWidth", wintypes.DWORD),
-        ("dmPanningHeight", wintypes.DWORD),
-    ]
-
-# Função para remover caracteres especiais, como acentos e cedilhas
-def remover_caracteres_especiais(texto):
-    texto = unicodedata.normalize("NFKD", texto)
-    return "".join([c for c in texto if unicodedata.category(c) != "Mn" and c != 'Ç' and c != 'ç'])
-
-# Função auxiliar para extrair strings de arrays de inteiros
-def extrair_string(array):
-    return ''.join(chr(char) for char in array if char != 0).strip()
-
-# Função para obter as informações dos monitores com WMI
-def obter_monitores_wmi():
-    try:
-        c = wmi.WMI(namespace="root\\WMI")
-        monitores = c.WmiMonitorID()
-        monitor_data = []
-
-        for monitor in monitores:
-            nome = extrair_string(monitor.UserFriendlyName)
-            modelo = extrair_string(monitor.ProductCodeID)
-            fabricante = extrair_string(monitor.ManufacturerName)
-
-            monitor_data.append({
-                "nome": nome or "Desconhecido",
-                "modelo": modelo or "Desconhecido",
-                "fabricante": fabricante or "Desconhecido"
+            monitor_info.append({
+                'Nome': name,
+                'Fabricante': model,
+                'Tamanho': round(diagonal_inches),
+                'Numero de Serie': serial_number
             })
 
-        return monitor_data
-    except Exception as e:
-        return [{"erro": str(e)}]
+    return monitor_info
 
-# Função para obter a resolução de todos os monitores
-def obter_resolucoes():
-    try:
-        user32 = ctypes.windll.user32
-        user32.EnumDisplaySettingsW.restype = wintypes.BOOL
-        user32.EnumDisplaySettingsW.argtypes = [wintypes.LPWSTR, wintypes.DWORD, ctypes.POINTER(DEVMODE)]
-
-        resolucoes = []
-
-        for i in range(MAX_DISPLAYS):
-            devmode = DEVMODE()
-            if user32.EnumDisplaySettingsW(f"\\\\.\\DISPLAY{i+1}", ENUM_CURRENT_SETTINGS, ctypes.byref(devmode)):
-                resolucoes.append({
-                    "nome": f"\\\\.\\DISPLAY{i+1}",
-                    "resolucao": f"{devmode.dmPelsWidth}x{devmode.dmPelsHeight}",
-                    "largura": devmode.dmPelsWidth,
-                    "altura": devmode.dmPelsHeight
-                })
-            else:
-                resolucoes.append({
-                    "nome": f"\\\\.\\DISPLAY{i+1}",
-                    "resolucao": "Indisponível"
-                })
-
-        return resolucoes
-    except Exception as e:
-        return [{"erro": str(e)}]
-
-# Função para exibir as informações dos monitores, incluindo resolução e nome/modelo
-def contar_monitores():
-    try:
-        ativar_wmi()
-        monitores_wmi = obter_monitores_wmi()
-        resolucoes = obter_resolucoes()
-
-        informacoes_monitores = []
-
-        for i, monitor in enumerate(monitores_wmi):
-            nome = remover_caracteres_especiais(monitor.get("nome", "Desconhecido"))
-            modelo = remover_caracteres_especiais(monitor.get("modelo", "Desconhecido"))
-            fabricante = remover_caracteres_especiais(monitor.get("fabricante", "Desconhecido"))
-            resolucao = resolucoes[i]["resolucao"]
-
-            informacoes_monitores.append(
-                f"Monitor {i + 1}: Nome: {nome}, Modelo: {modelo}, Resolucao: {resolucao}"
-            )
-
-        salvar_log(informacoes_monitores)
-    except Exception as e:
-        salvar_log([f"Erro: {str(e)}"])
-
-# Função para salvar as informações em um arquivo de log, com tudo em uma linha
-def salvar_log(informacoes):
-    try:
-        with open(LOG_FILE_PATH, "w", encoding="utf-8") as arquivo:
-            for info in informacoes:
-                arquivo.write(f"{info}\n")
-    except Exception as e:
-        print(f"Erro ao salvar o log: {e}")
-
-# Função principal
-def main():
-    run_as_admin()
-    contar_monitores()
+def save_log_to_file(log):
+    with open("C:\\Windows\\Temp\\Monitores_Dados.txt", "w") as file:
+        file.write(log)
 
 if __name__ == "__main__":
-    main()
+    info = get_monitor_info()
+    log = ""
+    for i, monitor in enumerate(info):
+        log += f"Monitor {i+1}, Nome: {monitor['Nome']}, Fabricante: {monitor['Fabricante']}, Tamanho: {monitor['Tamanho']}, Numero de Serie: {monitor['Numero de Serie']}"
+        if i < len(info) - 1:
+            log += ", "
+    print(log)
+    save_log_to_file(log)
