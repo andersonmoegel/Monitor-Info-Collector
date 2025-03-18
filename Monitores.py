@@ -1,48 +1,66 @@
 import wmi
-from screeninfo import get_monitors
+import math
+import unicodedata
+import os
 
-def get_monitor_info():
-    c = wmi.WMI(namespace='root\\wmi')
-    monitors = c.WmiMonitorID()
-    screen_monitors = get_monitors()
-    monitor_info = []
+def remove_accents_and_special_chars(text):
+    text = ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+    return ''.join(e for e in text if e.isalnum() or e.isspace())
 
-    for i, monitor in enumerate(monitors):
-        if i >= 3:
-            break
-        name = ''.join([chr(char) for char in monitor.UserFriendlyName if char != 0])
-        serial_number = ''.join([chr(char) for char in monitor.SerialNumberID if char != 0])
-        model = ''.join([chr(char) for char in monitor.ManufacturerName if char != 0])
-        
-        if i < len(screen_monitors):
-            screen_monitor = screen_monitors[i]
-            width_mm = screen_monitor.width_mm
-            height_mm = screen_monitor.height_mm
+def clean_string(text):
+    return text.strip()
 
-            # Convertendo o tamanho de milimetros para polegadas
-            width_inches = width_mm / 25.4
-            height_inches = height_mm / 25.4
-            diagonal_inches = (width_inches**2 + height_inches**2) ** 0.5
+def calculate_screen_size_mm(width_mm, height_mm):
+    diagonal_mm = math.sqrt(width_mm**2 + height_mm**2)
+    size_in_inches = diagonal_mm / 25.4
+    return round(size_in_inches) if size_in_inches % 1 != 0 else int(size_in_inches)
 
-            monitor_info.append({
-                'Nome': name,
-                'Fabricante': model,
-                'Tamanho': round(diagonal_inches),
-                'Numero de Serie': serial_number
+try:
+    c = wmi.WMI(namespace="root\\wmi")
+
+    def get_friendly_monitor_info():
+        monitors = c.WmiMonitorID()
+        if monitors is None:
+            return []
+        monitor_info_list = []
+        for monitor in monitors:
+            manufacturer = ''.join(chr(c) for c in monitor.ManufacturerName if c != 0)
+            model = ''.join(chr(c) for c in monitor.UserFriendlyName if c != 0)
+            serial_number = ''.join(chr(c) for c in monitor.SerialNumberID if c != 0)
+            manufacturer = clean_string(remove_accents_and_special_chars(manufacturer))
+            model = clean_string(remove_accents_and_special_chars(model))
+            serial_number = clean_string(remove_accents_and_special_chars(serial_number))
+            monitor_info_list.append({
+                "Fabricante": manufacturer,
+                "Modelo": model,
+                "Numero de Serie": serial_number
             })
+        return monitor_info_list
 
-    return monitor_info
+    def get_monitor_physical_size():
+        monitors = c.WmiMonitorBasicDisplayParams()
+        if monitors is None:
+            return []
+        monitor_sizes = []
+        for monitor in monitors:
+            if hasattr(monitor, 'MaxHorizontalImageSize') and hasattr(monitor, 'MaxVerticalImageSize'):
+                width_mm = monitor.MaxHorizontalImageSize * 10
+                height_mm = monitor.MaxVerticalImageSize * 10
+                size_in_inches = calculate_screen_size_mm(width_mm, height_mm)
+                monitor_sizes.append(size_in_inches)
+        return monitor_sizes
 
-def save_log_to_file(log):
-    with open("C:\\Windows\\Temp\\Monitores_Dados.txt", "w") as file:
-        file.write(log)
+    monitor_info_list = get_friendly_monitor_info()
+    monitor_sizes = get_monitor_physical_size()
 
-if __name__ == "__main__":
-    info = get_monitor_info()
-    log = ""
-    for i, monitor in enumerate(info):
-        log += f"Monitor {i+1}, Nome: {monitor['Nome']}, Fabricante: {monitor['Fabricante']}, Tamanho: {monitor['Tamanho']}, Numero de Serie: {monitor['Numero de Serie']}"
-        if i < len(info) - 1:
-            log += ", "
-    print(log)
-    save_log_to_file(log)
+    if monitor_info_list and monitor_sizes:
+        with open(r"C:\Windows\Temp\Monitores_Dados.txt", "w", encoding="utf-8") as file:
+            for i, info in enumerate(monitor_info_list, start=1):
+                size_in_inches = monitor_sizes[i-1] if i-1 < len(monitor_sizes) else "Desconhecido"
+                file.write(f"Monitor{i}; Fabricante: {info['Fabricante']}; Modelo: {info['Modelo']}; Tamanho: {size_in_inches}; N de serie: {info['Numero de Serie']};\n")
+    else:
+        if os.path.exists(r"C:\Windows\Temp\Monitores_Dados.txt"):
+            os.remove(r"C:\Windows\Temp\Monitores_Dados.txt")
+
+except Exception:
+    pass
