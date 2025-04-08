@@ -1,47 +1,60 @@
-# Documentação do Script de Coleta de Informações de Monitores
+# Monitor Information Collection Script
 
-Este script em Python coleta informações detalhadas sobre os monitores conectados a um sistema Windows, incluindo fabricante, modelo, número de série e tamanho físico da tela. Os dados coletados são armazenados em um arquivo de texto localizado em `C:\Windows\Temp\Monitores_Dados.txt`.
+This Python script collects detailed information about monitors connected to a Windows system, including manufacturer, model, serial number, and physical screen size. The collected data is stored in a text file located at `C:\Windows\Temp\Monitores_Dados.txt`.
 
-## Funcionalidades
-- Obtém informações detalhadas dos monitores através da interface WMI.
-- Processa os dados para remover acentos e caracteres especiais.
-- Calcula o tamanho físico da tela em polegadas com base nas dimensões fornecidas pelo sistema.
-- Salva as informações no arquivo `Monitores_Dados.txt`.
-- Caso nenhuma informação seja encontrada, remove o arquivo de saída, se existir.
+## Features
 
-## Requisitos
-- Sistema operacional Windows.
-- Python 3.x instalado.
-- Biblioteca `wmi` instalada (`pip install wmi`).
+- Retrieves detailed monitor information via the WMI interface.
+- Processes data to remove accents and special characters.
+- Calculates the physical screen size in inches based on system-provided dimensions.
+- Saves the information in the `Monitores_Dados.txt` file.
+- Automatically deletes the output file if no monitor information is found.
 
-## Instalação
-1. Certifique-se de ter o Python instalado no sistema.
-2. Instale a biblioteca `wmi` executando:
-   ```sh
-   pip install wmi
-   ```
-3. Salve o script em um arquivo `monitor_info.py`.
+## Requirements
 
-## Uso
-1. Execute o script no terminal ou prompt de comando do Windows:
-   ```sh
-   python monitor_info.py
-   ```
-2. O arquivo `Monitores_Dados.txt` será gerado em `C:\Windows\Temp\` contendo as informações dos monitores conectados.
+- Windows operating system.
+- Python 3.x installed.
+- `wmi` library installed.
 
-## Estrutura do Arquivo de Saída
-O arquivo `Monitores_Dados.txt` conterá informações no seguinte formato:
+Install the required library with:
+
+```sh
+pip install wmi
 ```
-Monitor1; Fabricante: Dell; Modelo: P2419H; Tamanho: 24; N de serie: ABC12345;
-Monitor2; Fabricante: Lenovo; Modelo: L24q-30; Tamanho: 23; N de serie: XYZ67890;
+
+## Installation
+
+1. Make sure Python is installed on your system.
+2. Install the `wmi` library using the command above.
+3. Save the script to a file named `monitor_info.py`.
+
+## Usage
+
+Run the script using the Windows terminal or command prompt:
+
+```sh
+python monitor_info.py
 ```
-Se nenhuma informação for encontrada, o arquivo será excluído automaticamente.
 
-## Possíveis Erros e Soluções
-- **Permissão negada ao criar o arquivo:** Execute o script como administrador.
-- **Nenhum monitor detectado:** Verifique se os drivers dos monitores estão atualizados.
-- **Erro ao importar `wmi`:** Instale a biblioteca com `pip install wmi`.
+The script will generate the file `Monitores_Dados.txt` in `C:\Windows\Temp\` containing information about the connected monitors.
 
-## Autor
-Desenvolvido por Anderson para coleta de dados de monitores em ambientes Windows.
+## Output File Structure
 
+The file `Monitores_Dados.txt` will contain data in the following format:
+
+```
+Monitor1; Manufacturer: Dell; Model: P2419H; Size: 24; Serial Number: ABC12345;
+Monitor2; Manufacturer: Lenovo; Model: L24q-30; Size: 23; Serial Number: XYZ67890;
+```
+
+If no monitor information is found, the file will be automatically deleted.
+
+## Possible Errors and Solutions
+
+- **Permission denied when creating the file:** Run the script as administrator.
+- **No monitor detected:** Check if monitor drivers are up to date.
+- **Error importing `wmi`:** Install the library using `pip install wmi`.
+
+## Author
+
+Developed by **Anderson** for monitor data collection in Windows environments.
