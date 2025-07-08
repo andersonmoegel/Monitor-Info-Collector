@@ -1,60 +1,128 @@
-# Monitor Information Collection Script
+# 🖥️ DetectaMonitores - WMI + EDID (Python)
 
-This Python script collects detailed information about monitors connected to a Windows system, including manufacturer, model, serial number, and physical screen size. The collected data is stored in a text file located at `C:\Windows\Temp\Monitores_Dados.txt`.
+## Este script Python identifica os monitores conectados ao computador utilizando diversas fontes confiáveis do Windows, como **WMI**, **registro do sistema (EDID)** e heurísticas inteligentes. Ele é capaz de recuperar:
 
-## Features
+- Fabricante  
+- Modelo  
+- Tamanho (em polegadas)  
+- Número de série  
 
-- Retrieves detailed monitor information via the WMI interface.
-- Processes data to remove accents and special characters.
-- Calculates the physical screen size in inches based on system-provided dimensions.
-- Saves the information in the `Monitores_Dados.txt` file.
-- Automatically deletes the output file if no monitor information is found.
+## Os dados são exportados automaticamente para um arquivo `.txt` em:
 
-## Requirements
+```
+C:\Windows\Temp\Monitores\_Dados.txt
+```
 
-- Windows operating system.
-- Python 3.x installed.
-- `wmi` library installed.
+Além disso, um log técnico é salvo para registrar falhas silenciosas:
 
-Install the required library with:
+```
+C:\Windows\Temp\Monitor\_Log.txt
+```
 
-```sh
+---
+
+## 🚀 Funcionalidades
+
+- Detecção de monitores via `WmiMonitorID` e `WmiMonitorBasicDisplayParams`  
+- Leitura direta do EDID via registro do Windows  
+- Fallback com heurísticas para extrair nome/tamanho de modelos incompletos  
+- Filtragem de dispositivos irrelevantes (áudio, bluetooth, etc.)  
+- Log detalhado com data e stack trace para diagnóstico  
+- Funciona com mais de um monitor conectado  
+- Permite compilação em `.exe` para execução remota ou distribuída  
+
+---
+
+## 📋 Estrutura do Arquivo Gerado
+
+O arquivo `Monitores_Dados.txt` contém os dados em formato:
+
+```
+Fabricante;Modelo;Tamanho;Numero de Serie
+```
+
+Exemplo:
+
+```
+SAM;LF24T35;24;HX5X113520
+LEN;ProdCode_16550;14;00000000
+```
+
+---
+
+## ⚙️ Requisitos
+
+- Python 3.8+  
+- Sistema Operacional: Windows  
+- Permissões de leitura no Registro e gravação em `C:\Windows\Temp`  
+
+Instale as dependências com:
+
+```bash
 pip install wmi
 ```
 
-## Installation
+---
 
-1. Make sure Python is installed on your system.
-2. Install the `wmi` library using the command above.
-3. Save the script to a file named `monitor_info.py`.
+## 🛠️ Compilação para .EXE
 
-## Usage
+Se quiser gerar um `.exe` standalone:
 
-Run the script using the Windows terminal or command prompt:
+### 1. Instale o PyInstaller
 
-```sh
-python monitor_info.py
+```bash
+pip install pyinstaller
 ```
 
-The script will generate the file `Monitores_Dados.txt` in `C:\Windows\Temp\` containing information about the connected monitors.
+### 2. Compile:
 
-## Output File Structure
-
-The file `Monitores_Dados.txt` will contain data in the following format:
-
-```
-Monitor1; Manufacturer: Dell; Model: P2419H; Size: 24; Serial Number: ABC12345;
-Monitor2; Manufacturer: Lenovo; Model: L24q-30; Size: 23; Serial Number: XYZ67890;
+```bash
+pyinstaller --onefile --noconsole monitor_detect.py
 ```
 
-If no monitor information is found, the file will be automatically deleted.
+O `.exe` será gerado na pasta `dist\`.
 
-## Possible Errors and Solutions
+> ⚠️ O modo `--noconsole` evita abrir janela preta. Ideal para execução silenciosa.
 
-- **Permission denied when creating the file:** Run the script as administrator.
-- **No monitor detected:** Check if monitor drivers are up to date.
-- **Error importing `wmi`:** Install the library using `pip install wmi`.
+---
 
-## Author
+## 🧪 Exemplos de uso
 
-Developed by **Anderson** for monitor data collection in Windows environments.
+### Execução direta no Python:
+
+```bash
+python monitor_detect.py
+```
+
+### Execução do `.exe`:
+
+```bash
+C:\caminho\para\monitor_detect.exe
+```
+
+---
+
+## 📄 Log de alterações
+
+* **v2.0**:
+  * Inclusão de fallback com leitura direta do EDID
+  * Verificação apenas dos monitores atualmente conectados (ativos)
+  * Registro de exceções detalhadas com stack trace
+  * Reformulação completa do código para modularidade e robustez
+
+* **v1.0**:
+  * Detecção básica via WMI
+
+---
+
+## 🧠 Autor
+
+**Anderson Moegel**  
+🔗 [LinkedIn](https://www.linkedin.com/in/andersonmoegel/)  
+💻 Desenvolvedor e profissional de Governança de TI
+
+---
+
+## ✅ Licença
+
+Uso interno e educacional. Adaptável conforme política da empresa.
